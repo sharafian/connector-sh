@@ -1,0 +1,30 @@
+log_format postdata $uri " " $request_body;
+
+upstream static_backend {
+  server localhost:89;
+}
+
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server ipv6only=on;
+
+  root /usr/share/nginx/html;
+  index index.html index.htm;
+
+  # Make site accessible from http://localhost/
+  server_name localhost;
+
+  error_page  405     =200 @405;
+  location @405 {
+    access_log /var/log/nginx/post.access.log postdata;
+    proxy_method GET;
+    proxy_pass http://static_backend;
+  }
+}
+
+server {
+  listen 89 default_server;
+  location / {
+    try_files $uri $uri/ =404;
+  }
+}

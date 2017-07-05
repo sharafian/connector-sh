@@ -9,4 +9,10 @@ COPY ./connector.sh connector.sh
 COPY ./routing.txt routing.txt
 COPY ./in.log in.log
 
-CMD [ "/bin/bash", "connector.sh" ]
+COPY ./default /etc/nginx/sites-enabled/default
+COPY ./rpc /usr/share/nginx/html/rpc
+
+COPY ./init.sh init.sh
+
+EXPOSE 80
+CMD [ "/bin/bash", "init.sh" ]

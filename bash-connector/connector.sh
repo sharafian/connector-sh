@@ -13,10 +13,19 @@ function inspector () {
   done
 }
 
-# network -> (json)
+# network -> (logs)
 function get_incoming () {
-  # right now this just prints from a log file full of payments
-  cat 'in.log'
+  # TODO: only get send_transfer calls
+  tail -f /var/log/nginx/post.access.log
+}
+
+# (logs) -> (json)
+function clean_logs () {
+  while read logs; do
+    echo "$logs" \
+      | sed -e 's/x22/"/g' \
+      | cut -f2- -d' '
+  done
 }
 
 # (json) -> (id, condition, expiry, ILP, amount)
@@ -60,7 +69,7 @@ function parse_ilp () {
     # padding=$(printf "%$((${#packet} % 4))s")
     echo "$packet" \
       | cut -f 4 -d' ' \
-      | sed -e 's/-/+/' -e 's/_/\//' \
+      | sed -e 's/-/+/g' -e 's/_/\//g' \
       | base64 -di 2>/dev/null \
       | hexdump -v -e '/1 "%02x"' \
       | xargs -n 1 bash -c 'echo "${0:20:2} ${0:22}"' \
@@ -117,6 +126,8 @@ function post_destination_transfer () {
 }
 
 get_incoming \
+  | clean_logs \
+  | inspector \
   | extract_ilp \
   | parse_ilp \
   | get_routing_info \
