@@ -6,17 +6,16 @@
   # \_> alice example.alice
   # \_> {"to":"example.alice","ilp":"alice"}
 function parse_ilp () {
-  read packet
-  echo "$packet" \
-    | base64 -D \
-    | hexdump -v -e '/1 "%02x"' \
-    | xargs -n 1 -I {} echo "{}" \
-    | xargs -n 1 bash -c 'echo "beep ${0}"'
-    # | xxd -r -p
-    # | sed -e 's/.\{8}\(.\{1}\)\(.+\)/\1 \2/' \
-    # | cut -d' ' -f 1,2 \
-    # | xargs -n 3 bash -c 'echo $1 | sed -e "s/^\(.\{$(printf "%d" "$0")}\)/\1/"' \
-    # | echo
+  while read packet; do
+    echo "$packet" \
+      | base64 -D \
+      | hexdump -v -e '/1 "%02x"' \
+      | xargs -n 1 -I {} echo "{}" \
+      | xargs -n 1 bash -c 'echo "${0:20:2} ${0:22}"' \
+      | xargs -n 2 bash -c 'echo ${1:0:$((2 * 16#$0))}' \
+      | xxd -r -p
+    echo
+  done
 }
 
 cat 'in.log' \
