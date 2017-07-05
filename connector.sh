@@ -38,17 +38,33 @@ function parse_ilp () {
   done
 }
 
-# (condition, expiry, ILP, address, amount) -> (condition, expiry, ILP, amount, nextHop, rpc)
+# (condition, expiry, ILP, address, amount) -> (condition, expiry, ILP, amount, nextHop, RPC)
 function get_routing_info () {
+  # use a bash while loop to get a matching prefix
+  function prefix_match () {
+    read prefix
+    while read route; do
+      [[ "$prefix" == "$(echo $route | cut -f 1 -d' ')"* ]] && echo $route
+    done < routing.txt
+  }
+  
   while read info; do
-    echo $info
+    # write channels 1, 2, 3, and 5 unaltered
+    echo -n "$(echo $info | cut -f 1,2,3,5 -d' ') "
+
+    # turn channel 4 into (nextHop, RPC)
+    echo "$info" \
+      | cut -f 4 -d' ' \
+      | prefix_match \
+      | cut -f 2,3 -d' '
   done
 }
 
-# (condition, expiry, ILP, amount, nextHop, rpc) -> network
+# (condition, expiry, ILP, amount, nextHop, RPC) -> network
 function post_destination_transfer () {
   while read info; do
-    echo $info
+    echo $info \
+      | xargs -n 6 bash -c 'curl -X POST "$5" -H "Content-Type: application/json" -d "{\"executionCondition\":\"$0\",\"expiresAt\":\"$1\",\"ilp\":\"$2\",\"amount\":\"$3\",\"to\":\"$4\"}"'
   done
 }
 
