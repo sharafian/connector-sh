@@ -1,4 +1,17 @@
 #!/bin/bash
+#
+# "This is where the fun beings"
+#   - Anakin Skywalker, Star Wars III Revenge of the Sith
+#
+
+# can be inserted anywhere to view that part of the pipe
+# for deugging purposes
+function inspector () {
+  while read info; do
+    echo $info 1>&2
+    echo $info
+  done
+}
 
 # network -> (json)
 function get_incoming () {
@@ -30,7 +43,9 @@ function parse_ilp () {
 
     # write channel 4 as the parsed address
     # we parse the address by:
+    # 0.5 make some padding because GNU requires it
     # 1. getting the packet (in channel 4 of the input)
+    # 1.5. turn base64url into base64 with sed
     # 2. decode the base64 into raw data. this is hard to work with so:
     # 3. turn the raw data into hex. now we can use string operations easily.
     #    hex formatting is done with a format string in hexdump.
@@ -42,13 +57,16 @@ function parse_ilp () {
     #    prefix bytes specifies. we take this amount of charactes off the front
     #    of channel 2.
     # 6. now decode from hex with 'xdd'
+    # padding=$(printf "%$((${#packet} % 4))s")
     echo "$packet" \
       | cut -f 4 -d' ' \
-      | base64 -D \
+      | sed -e 's/-/+/' -e 's/_/\//' \
+      | base64 -di 2>/dev/null \
       | hexdump -v -e '/1 "%02x"' \
       | xargs -n 1 bash -c 'echo "${0:20:2} ${0:22}"' \
       | xargs -n 2 bash -c 'echo ${1:0:$((2 * 16#$0))}' \
       | xxd -r -p
+      # | xargs -I {} echo -n "{}${padding// /=}" \
 
     # write the amount from channel 5 to channel 6
     echo -n ' '
@@ -95,14 +113,6 @@ function post_destination_transfer () {
     # new bash subshell.
     echo "$info $(echo $info | cut -d' ' -f 6 | sed -e 's/\(.*\)\..*/\1./')" \
       | xargs -n 8 bash -c 'curl -X POST "$6?prefix=$7&method=send_transfer" -H "Content-Type: application/json" -d "{\"id\":\"$0\",\"executionCondition\":\"$1\",\"expiresAt\":\"$2\",\"ilp\":\"$3\",\"amount\":\"$4\",\"to\":\"$5\"}"'
-  done
-}
-
-# can be inserted anywhere to view that part of the pipe
-# for deugging purposes
-function inspector () {
-  while read info; do
-    echo $info 1>&2
   done
 }
 
