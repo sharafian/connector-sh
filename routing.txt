@@ -1,0 +1,2 @@
+alice example.alice http://localhost:8090/rpc/alice
+bob example.bob http://localhost:8090/rpc/bob
